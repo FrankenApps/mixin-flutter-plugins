@@ -16,6 +16,7 @@
 #include "wil/com.h"
 
 #include "WebView2.h"
+#include "navigation_request.h"
 
 namespace webview_window {
 
@@ -72,6 +73,10 @@ class WebView {
 
   // Pointer to WebView
   wil::com_ptr<ICoreWebView2> webview_;
+
+  wil::com_ptr<ICoreWebView2Environment> environment_;
+
+  std::shared_ptr<NavigationRequest> pending_navigation_;
 
   std::wstring default_user_agent_;
 
