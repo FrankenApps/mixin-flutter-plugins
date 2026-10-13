@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:desktop_webview_window/desktop_webview_window.dart';
@@ -111,6 +112,13 @@ class _MyAppState extends State<MyApp> {
                   onPressed: _webviewAvailable != true ? null : _onTap,
                   child: const Text('Open'),
                 ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: _webviewAvailable != true
+                      ? null
+                      : _runPostNavigationSample,
+                  child: const Text('Run POST navigation sample'),
+                ),
                 const SizedBox(height: 20),
                 TextButton(
                   onPressed: () async {
@@ -181,6 +189,73 @@ class _MyAppState extends State<MyApp> {
       } catch (e) {
         debugPrint('evaluateJavaScript error: $e \n $javaScript');
       }
+    }
+  }
+
+  Future<void> _runPostNavigationSample() async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    server.listen((request) async {
+      final requestBody = await utf8.decoder.bind(request).join();
+      request.response.headers.contentType = ContentType.html;
+
+      if (request.uri.path == '/' && request.method == 'GET') {
+        request.response.write('''
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>POST navigation sample</title>
+          <h1>POST navigation sample</h1>
+          <p>Submit this form to send a POST request through the WebView.</p>
+          <form method="POST" action="/submit">
+            <input type="hidden" name="message" value="hello-webview">
+            <button type="submit">Send POST request</button>
+          </form>
+        ''');
+      } else if (request.uri.path == '/submit') {
+        final succeeded = request.method == 'POST' &&
+            requestBody == 'message=hello-webview';
+        debugPrint(
+          'POST sample received ${request.method} ${request.uri.path}: '
+          '$requestBody',
+        );
+        request.response.statusCode =
+            succeeded ? HttpStatus.ok : HttpStatus.badRequest;
+        request.response.write('''
+          <!doctype html>
+          <meta charset="utf-8">
+          <h1 style="color: ${succeeded ? 'green' : 'red'}">
+            ${succeeded ? 'POST request succeeded' : 'POST request failed'}
+          </h1>
+          <p>Method received: ${request.method}</p>
+          <p>Body received: $requestBody</p>
+          <p>Expected: POST with body message=hello-webview</p>
+        ''');
+      } else {
+        request.response.statusCode = HttpStatus.notFound;
+        request.response.write('Not found');
+      }
+      await request.response.close();
+    });
+
+    try {
+      final webview = await WebviewWindow.create(
+        configuration: CreateConfiguration(
+          title: 'POST request sample',
+          userDataFolderWindows: await _getWebViewPath(),
+          titleBarTopPadding: Platform.isMacOS ? 20 : 0,
+        ),
+      );
+      webview
+        ..setOnUrlRequestCallback((url) {
+          debugPrint('POST sample navigation requested: $url');
+          return true;
+        })
+        ..launch('http://127.0.0.1:${server.port}/')
+        ..onClose.whenComplete(() async {
+          await server.close(force: true);
+        });
+    } catch (_) {
+      await server.close(force: true);
+      rethrow;
     }
   }
 }

@@ -102,6 +102,18 @@ flutter test integration_test/windows_webview_test.dart -d windows --timeout 5m
 The tests use local pages, temporary profiles, and fake media devices. They do
 not require a physical camera or microphone.
 
+### Manual POST navigation sample
+
+Run the example app on Windows and choose **Run POST navigation sample**. In the
+WebView window, choose **Send POST request**. The result page reports whether it
+received the expected `POST` method and `message=hello-webview` body. A failure
+page displays the method and body the server actually received.
+
+```powershell
+cd packages/desktop_webview_window/example
+flutter run -d windows
+```
+
 The bundled Windows SDK headers, loader DLL, and import library come from
 Microsoft.Web.WebView2 SDK 1.0.4258.31.
 
